@@ -34,12 +34,19 @@ import ParentsList from "../pages/parents/ParentsList";
 import LinkParent from "../pages/parents/LinkParent";
 import Reports from "../pages/reports/Reports";
 import Notifications from "../pages/notifications/Notifications";
+import Settings from "../pages/settings/Settings";
 import UsersManagement from "../pages/settings/UsersManagement";
 import BackupSystem from "../pages/settings/BackupSystem";
 import ActivityLogs from "../pages/settings/ActivityLogs";
+import SystemReset from "../pages/admin/SystemReset";
 import StudentsList from "../pages/students/StudentsList";
 import NotFound from "../pages/NotFound";
 import CameraTest from "../pages/test/CameraTest";
+import MfaLogin from "../pages/auth/MfaLogin";
+import TwoFactorAuth from "../pages/auth/TwoFactorAuth";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import TwoFactorTest from "../pages/test/TwoFactorTest";
+import OTPTest from "../pages/test/OTPTest";
 import { roleHomePath } from "../utils/helpers";
 
 function Home() {
@@ -48,12 +55,17 @@ function Home() {
 
 function RoleHomeRedirect() {
   const { role } = useAuth();
+  console.log("RoleHomeRedirect - role:", role);
+  console.log("RoleHomeRedirect - path:", roleHomePath(role));
   return <Navigate to={roleHomePath(role)} replace />;
 }
 
 function RoleOnly({ allow, children }) {
   const { role } = useAuth();
-  if (role !== allow) return <Navigate to={roleHomePath(role)} replace />;
+  // Convert both to lowercase for comparison
+  if (role?.toLowerCase() !== allow.toLowerCase()) {
+    return <Navigate to={roleHomePath(role)} replace />;
+  }
   return children;
 }
 
@@ -63,7 +75,11 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
-        <Route path="/login" element={<Landing initialOpen={true} />} />
+        <Route path="/2fa" element={<TwoFactorAuth />} />
+        <Route path="/mfa" element={<MfaLogin />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/test-2fa" element={<TwoFactorTest />} />
+        <Route path="/test-otp" element={<OTPTest />} />
         <Route path="/exam/:id" element={<PublicTakeExam />} />
         <Route path="/exam/:id/submitted" element={<ExamSubmitted />} />
         <Route path="/entrance-exam" element={<EntranceExamStart />} />
@@ -79,6 +95,14 @@ export default function AppRoutes() {
               element={
                 <RoleOnly allow="admin">
                   <Dashboard />
+                </RoleOnly>
+              }
+            />
+            <Route
+              path="/admin/system-reset"
+              element={
+                <RoleOnly allow="admin">
+                  <SystemReset />
                 </RoleOnly>
               }
             />
@@ -147,6 +171,7 @@ export default function AppRoutes() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/notifications" element={<Notifications />} />
 
+            <Route path="/settings" element={<Settings />} />
             <Route path="/settings/users" element={<UsersManagement />} />
             <Route path="/settings/backup" element={<BackupSystem />} />
             <Route path="/settings/logs" element={<ActivityLogs />} />

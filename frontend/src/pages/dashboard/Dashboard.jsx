@@ -5,6 +5,8 @@ import PageHeader from "../../components/common/PageHeader";
 import StatCard from "../../components/common/StatCard";
 import Panel from "../../components/common/Panel";
 import { getAssistantDashboard, getDashboardSummary, getHeadteacherDashboard, getTeacherDashboard, getParentDashboard } from "../../services/dashboardService";
+import * as adminService from "../../services/adminService";
+import * as classService from "../../services/classService";
 import { formatDate } from "../../utils/helpers";
 import { initializeAdmissionPayment } from "../../services/paymentService";
 
@@ -107,12 +109,13 @@ function roleCards(role) {
   switch (role) {
     case "admin":
       return [
-        { title: "Total Applicants", value: "0", tone: "brand" },
-        { title: "Total Students", value: "0", tone: "teal" },
-        { title: "Total Teachers", value: "0", tone: "gold" },
-        { title: "Total Parents", value: "0", tone: "neutral" },
-        { title: "Total Payments", value: "0", tone: "teal" },
+        { title: "Total Users", value: "0", tone: "brand" },
+        { title: "Total Applicants", value: "0", tone: "teal" },
+        { title: "Total Students", value: "0", tone: "gold" },
+        { title: "Total Teachers", value: "0", tone: "neutral" },
+        { title: "Total Parents", value: "0", tone: "teal" },
         { title: "Total Classes", value: "0", tone: "brand" },
+        { title: "Total Payments", value: "0", tone: "gold" },
       ];
     case "headteacher":
       return [
@@ -143,8 +146,10 @@ function roleCards(role) {
 }
 
 export default function Dashboard() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [summary, setSummary] = useState(null);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [classes, setClasses] = useState([]);
   const [head, setHead] = useState(null);
   const [assistant, setAssistant] = useState(null);
   const [teacher, setTeacher] = useState(null);
@@ -168,20 +173,77 @@ export default function Dashboard() {
   useEffect(() => {
     let ignore = false;
     (async () => {
+      console.log("Dashboard useEffect - role:", role);
+      console.log("Dashboard useEffect - user:", user);
+      
+      // Ensure we have a valid role
+      if (!role) {
+        console.log("No role found, skipping dashboard loading");
+        return;
+      }
+      
       try {
-        if (role === "headteacher") {
+        const normalizedRole = role?.toLowerCase();
+        console.log("Dashboard useEffect - normalizedRole:", normalizedRole);
+        
+        if (normalizedRole === "headteacher") {
+          console.log("Loading headteacher dashboard...");
           const data = await getHeadteacherDashboard();
           if (!ignore) setHead(data);
-        } else if (role === "assistantHeadteacher") {
+          
+          // Also fetch classes for "Class Applying For" field
+          try {
+            console.log("Fetching classes for headteacher...");
+            const classesData = await classService.listClasses();
+            const classesArray = Array.isArray(classesData) ? classesData : classesData.items || [];
+            console.log("Classes data:", classesArray);
+            if (!ignore) setClasses(classesArray);
+          } catch (classesError) {
+            console.error("Failed to fetch classes:", classesError);
+            if (!ignore) setClasses([]);
+          }
+        } else if (normalizedRole === "assistant_headteacher") {
+          console.log("Loading assistant headteacher dashboard...");
           const data = await getAssistantDashboard();
           if (!ignore) setAssistant(data);
-        } else if (role === "teacher") {
+          
+          // Also fetch classes for "Class Applying For" field
+          try {
+            console.log("Fetching classes for assistant headteacher...");
+            const classesData = await classService.listClasses();
+            const classesArray = Array.isArray(classesData) ? classesData : classesData.items || [];
+            console.log("Classes data:", classesArray);
+            if (!ignore) setClasses(classesArray);
+          } catch (classesError) {
+            console.error("Failed to fetch classes:", classesError);
+            if (!ignore) setClasses([]);
+          }
+        } else if (normalizedRole === "teacher") {
+          console.log("Loading teacher dashboard...");
           const data = await getTeacherDashboard();
           if (!ignore) setTeacher(data);
-        } else if (role === "parent") {
+        } else if (normalizedRole === "parent") {
+          console.log("Loading parent dashboard...");
           const data = await getParentDashboard();
           if (!ignore) setParent(data);
+        } else if (normalizedRole === "admin") {
+          console.log("Loading admin dashboard...");
+          const data = await getDashboardSummary();
+          if (!ignore) setSummary(data);
+          
+          // Also fetch total users count
+          try {
+            console.log("Fetching total users count...");
+            const usersData = await adminService.listUsers();
+            const usersArray = Array.isArray(usersData) ? usersData : usersData.users || usersData.items || [];
+            console.log("Total users count:", usersArray.length);
+            if (!ignore) setTotalUsers(usersArray.length);
+          } catch (usersError) {
+            console.error("Failed to fetch total users:", usersError);
+            if (!ignore) setTotalUsers(0);
+          }
         } else {
+          console.log("Unknown role, loading default dashboard...");
           const data = await getDashboardSummary();
           if (!ignore) setSummary(data);
         }
@@ -201,8 +263,10 @@ export default function Dashboard() {
   }, [role]);
 
   const chartData = useMemo(() => {
+    const normalizedRole = role?.toLowerCase();
+    
     // For admin role, use summary data
-    if (role === "admin" && summary) {
+    if (normalizedRole === "admin" && summary) {
       const applicants = Array.isArray(summary.applicantsByClass) ? summary.applicantsByClass : [];
       const admissions = Array.isArray(summary.admissionsByClass) ? summary.admissionsByClass : [];
       const byClass = new Map();
@@ -224,7 +288,7 @@ export default function Dashboard() {
     }
 
     // For headteacher role, use head data
-    if (role === "headteacher" && head) {
+    if (normalizedRole === "headteacher" && head) {
       const applicants = Array.isArray(head.applicantsByClass) ? head.applicantsByClass : [];
       const admissions = Array.isArray(head.admissionsByClass) ? head.admissionsByClass : [];
       const byClass = new Map();
@@ -250,7 +314,9 @@ export default function Dashboard() {
   }, [role, summary, head, assistant, teacher, parent]);
 
   const cards = useMemo(() => {
-    if (role === "headteacher" && head) {
+    const normalizedRole = role?.toLowerCase();
+    
+    if (normalizedRole === "headteacher" && head) {
       return [
         { title: "Total Applicants", value: String(head.totals?.totalApplicants || 0), tone: "brand" },
         { title: "Pending Review", value: String(head.workflow?.pendingReview || 0), tone: "gold" },
@@ -264,7 +330,7 @@ export default function Dashboard() {
       ];
     }
 
-    if (role === "assistantHeadteacher" && assistant) {
+    if (normalizedRole === "assistant_headteacher" && assistant) {
       return [
         { title: "Total Applicants", value: String(assistant.totals?.totalApplicants || 0), tone: "brand" },
         { title: "Applicants Waiting Exam", value: String(assistant.workflow?.waitingExam || 0), tone: "gold" },
@@ -276,7 +342,7 @@ export default function Dashboard() {
       ];
     }
 
-    if (role === "teacher" && teacher) {
+    if (normalizedRole === "teacher" && teacher) {
       return [
         { title: "Total students", value: String(teacher.totals?.students || 0), tone: "brand" },
         {
@@ -295,7 +361,7 @@ export default function Dashboard() {
       ];
     }
 
-    if (role === "parent" && parent) {
+    if (normalizedRole === "parent" && parent) {
       const latest = parent.latestApplicant;
       const status = latest?.status ? String(latest.status).replaceAll("_", " ") : "—";
       return [
@@ -322,20 +388,21 @@ export default function Dashboard() {
 
     if (!summary) return roleCards(role);
 
-    if (role === "admin") {
+    if (normalizedRole === "admin") {
       return [
-        { title: "Total Applicants", value: String(summary.totals?.totalApplicants || 0), tone: "brand" },
-        { title: "Total Students", value: String(summary.totals?.totalStudents || 0), tone: "teal" },
-        { title: "Total Teachers", value: String(summary.totals?.totalTeachers || 0), tone: "gold" },
-        { title: "Total Parents", value: String(summary.totals?.totalParents || 0), tone: "neutral" },
-        { title: "Total Classes", value: String(summary.totals?.totalClasses || 0), tone: "brand" },
-        { title: "Total Payments", value: String(summary.totals?.totalPayments || 0), tone: "teal" },
-        { title: "Admission Rate", value: `${summary.workflow?.admissionRate || 0}%`, tone: "gold" },
+        { title: "Total Users", value: String(totalUsers), tone: "brand" },
+        { title: "Total Applicants", value: "0", tone: "teal" },
+        { title: "Total Students", value: "0", tone: "gold" },
+        { title: "Total Teachers", value: "0", tone: "neutral" },
+        { title: "Total Parents", value: "0", tone: "teal" },
+        { title: "Total Classes", value: "0", tone: "brand" },
+        { title: "Total Payments", value: "0", tone: "gold" },
+        { title: "Admission Rate", value: "0%", tone: "teal" },
       ];
     }
 
     return roleCards(role);
-  }, [role, summary, head, assistant, teacher, parent]);
+  }, [role, summary, head, assistant, teacher, parent, totalUsers, classes]);
 
   return (
     <div className="space-y-4">
@@ -389,7 +456,7 @@ export default function Dashboard() {
         </Panel>
 
         <Panel className="p-4">
-          {role === "parent" && parent?.latestApplicant ? (
+          {role?.toLowerCase() === "parent" && parent?.latestApplicant ? (
             <>
               <div className="font-display text-lg font-semibold text-slate-900">Payment Actions</div>
               <div className="mt-3 space-y-3">
@@ -424,14 +491,14 @@ export default function Dashboard() {
                 )}
               </div>
             </>
-          ) : role === "parent" ? (
+          ) : role?.toLowerCase() === "parent" ? (
             <>
               <div className="font-display text-lg font-semibold text-slate-900">Payment Actions</div>
               <div className="mt-3 rounded-2xl bg-white/60 p-3 text-sm text-slate-600">
                 Debug: No latestApplicant found. Parent data: {JSON.stringify(parent, null, 2)}
               </div>
             </>
-          ) : role === "admin" ? (
+          ) : role?.toLowerCase() === "admin" ? (
             <>
               <div className="font-display text-lg font-semibold text-slate-900">Next actions</div>
               <div className="mt-2 grid gap-2 text-sm text-slate-700">
@@ -449,7 +516,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </>
-          ) : role === "headteacher" && head ? (
+          ) : role?.toLowerCase() === "headteacher" && head ? (
             <>
               <div className="font-display text-lg font-semibold text-slate-900">Recent Activity</div>
               <div className="mt-3 space-y-2 text-sm text-slate-700">
@@ -467,7 +534,7 @@ export default function Dashboard() {
                 )}
               </div>
             </>
-          ) : role === "assistantHeadteacher" && assistant ? (
+          ) : role?.toLowerCase() === "assistant_headteacher" && assistant ? (
             <>
               <div className="font-display text-lg font-semibold text-slate-900">Recent actions</div>
               <div className="mt-3 space-y-2 text-sm text-slate-700">
@@ -485,7 +552,7 @@ export default function Dashboard() {
                 )}
               </div>
             </>
-          ) : role === "teacher" && teacher ? (
+          ) : role?.toLowerCase() === "teacher" && teacher ? (
             <>
               <div className="font-display text-lg font-semibold text-slate-900">Recent action</div>
               <div className="mt-3 space-y-2 text-sm text-slate-700">
@@ -522,6 +589,20 @@ export default function Dashboard() {
               </div>
             </>
           )}
+        </Panel>
+        
+        {/* Debug Section */}
+        <Panel className="p-4">
+          <div className="font-display text-lg font-semibold text-slate-900">Debug Info</div>
+          <div className="mt-3 rounded-2xl bg-white/60 p-3 text-sm text-slate-600">
+            <p>Current role: {role}</p>
+            <p>Normalized role: {role?.toLowerCase()}</p>
+            <p>Summary data: {summary ? 'Available' : 'Not available'}</p>
+            <p>Parent data: {parent ? 'Available' : 'Not available'}</p>
+            <p>Head data: {head ? 'Available' : 'Not available'}</p>
+            <p>Assistant data: {assistant ? 'Available' : 'Not available'}</p>
+            <p>Teacher data: {teacher ? 'Available' : 'Not available'}</p>
+          </div>
         </Panel>
       </div>
     </div>

@@ -8,7 +8,15 @@ export async function createUser(userData) {
 
 // Get all users (Admin only)
 export async function listUsers(params) {
+  console.log("adminService.listUsers called with params:", params);
+  console.log("Making API call to: /admin/users");
+  
   const res = await api.get("/admin/users", { params });
+  
+  console.log("API response status:", res.status);
+  console.log("API response data:", res.data);
+  console.log("Full response:", res);
+  
   return res.data;
 }
 
@@ -30,15 +38,14 @@ export async function deleteUser(userId) {
   return res.data;
 }
 
-// Get current user profile
-export async function getCurrentUser() {
-  const res = await api.get("/users/profile");
+// Deactivate user (Admin only)
+export async function deactivateUser(userId) {
+  const res = await api.patch(`/admin/users/${userId}/deactivate`);
   return res.data;
 }
 
-// Update current user profile
-export async function updateCurrentUser(userData) {
-  const res = await api.patch("/users/profile", userData);
+// Activate user (Admin only)
+export async function activateUser(userId) {
+  const res = await api.patch(`/admin/users/${userId}/activate`);
   return res.data;
 }
-

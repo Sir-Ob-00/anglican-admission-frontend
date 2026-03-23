@@ -13,9 +13,7 @@ const roleMenus = {
     { to: "/classes", label: "Classes" },
     { to: "/payments", label: "Payments" },
     { to: "/notifications", label: "Notifications" },
-    { to: "/settings/logs", label: "Activity Logs" },
-    { to: "/settings/backup", label: "System Backup" },
-    { to: "/settings/users", label: "Manage Users" },
+    { to: "/settings", label: "Settings" },
   ],
   headteacher: [
     { to: "/headteacher", label: "Dashboard" },
@@ -29,10 +27,9 @@ const roleMenus = {
     { to: "/payments", label: "Payments" },
     { to: "/reports", label: "Reports" },
     { to: "/notifications", label: "Notifications" },
-    { to: "/settings/logs", label: "Activity Logs" },
-    { to: "/settings/users", label: "Users" },
+    { to: "/settings", label: "Settings" },
   ],
-  assistantHeadteacher: [
+  assistant_headteacher: [
     { to: "/assistant-headteacher", label: "Dashboard" },
     { to: "/applicants/new", label: "Add Applicant" },
     { to: "/applicants", label: "Applicants" },
@@ -215,13 +212,16 @@ function iconForItem(it) {
   return IconGrid;
 }
 
-function roleLabel(role) {
-  switch (role) {
+function roleDisplay(role) {
+  // Handle both uppercase and lowercase roles
+  const normalizedRole = role?.toLowerCase();
+  
+  switch (normalizedRole) {
     case "admin":
-      return "Admin";
+      return "Administrator";
     case "headteacher":
-      return "Headteacher";
-    case "assistantHeadteacher":
+      return "Head Teacher";
+    case "assistant_headteacher":
       return "Assistant Headteacher";
     case "teacher":
       return "Class Teacher";
@@ -232,7 +232,9 @@ function roleLabel(role) {
 
 export default function Sidebar({ open, onClose }) {
   const { role, user } = useAuth();
-  const items = roleMenus[role] || roleMenus.parent;
+  // Convert role to lowercase to match roleMenus keys
+  const normalizedRole = role?.toLowerCase();
+  const items = roleMenus[normalizedRole] || roleMenus.parent;
 
   return (
     <>
@@ -291,7 +293,7 @@ export default function Sidebar({ open, onClose }) {
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-white">
-                {roleLabel(role)} online
+                {roleDisplay(role)} online
               </div>
               <div className="truncate text-xs text-blue-50/80">{user?.name || user?.email || ""}</div>
             </div>

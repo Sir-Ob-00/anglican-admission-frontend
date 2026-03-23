@@ -5,12 +5,13 @@ import { listNotifications } from "../../services/notificationService";
 import { cx, formatDate } from "../../utils/helpers";
 
 function roleLabel(role) {
-  switch (role) {
+  const normalizedRole = role?.toLowerCase();
+  switch (normalizedRole) {
     case "admin":
       return "Admin";
     case "headteacher":
       return "Headteacher";
-    case "assistantHeadteacher":
+    case "assistant_headteacher":
       return "Assistant Head";
     case "teacher":
       return "Class Teacher";
@@ -164,7 +165,7 @@ export default function Navbar({ onToggleSidebar }) {
             className="inline-flex h-10 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white shadow-sm hover:brightness-110"
             onClick={() => {
               logout();
-              navigate("/login", { replace: true });
+              navigate("/", { replace: true });
             }}
           >
             Logout

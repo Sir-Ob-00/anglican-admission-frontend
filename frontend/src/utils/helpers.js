@@ -47,15 +47,20 @@ export function cx(...parts) {
 }
 
 export function roleHomePath(role) {
-  switch (role) {
+  // Convert role to lowercase for consistent matching
+  const normalizedRole = role?.toLowerCase();
+  
+  switch (normalizedRole) {
     case "admin":
       return "/admin";
     case "headteacher":
       return "/headteacher";
-    case "assistantHeadteacher":
+    case "assistant_headteacher":
       return "/assistant-headteacher";
     case "teacher":
       return "/teacher";
+    case "parent":
+      return "/parent";
     default:
       return "/parent";
   }

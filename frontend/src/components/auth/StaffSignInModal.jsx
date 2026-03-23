@@ -19,7 +19,7 @@ export default function StaffSignInModal({ open, onClose }) {
     clearErrors,
     formState: { errors, isSubmitting },
   } = useForm({
-    defaultValues: { username: "", password: "" },
+    defaultValues: { email: "", password: "" },
   });
 
   useEffect(() => {
@@ -49,32 +49,48 @@ export default function StaffSignInModal({ open, onClose }) {
           try {
             setAuthError("");
             clearErrors();
+            console.log("StaffSignInModal login attempt:", values);
             const data = await login(values);
+            console.log("StaffSignInModal login response:", data);
+            console.log("StaffSignInModal data.requiresMfa:", data.requiresMfa);
+            console.log("StaffSignInModal data.user?.mfa_enabled:", data.user?.mfa_enabled);
+            
+            // Check if MFA is required
+            if (data.requiresMfa || data.user?.mfa_enabled) {
+              console.log("MFA required in StaffSignInModal, redirecting to MFA page");
+              onClose?.();
+              navigate("/mfa", { replace: true });
+              return;
+            }
+            
+            // Normal login flow - no MFA required
+            console.log("No MFA required in StaffSignInModal, normal login flow");
             onClose?.();
             navigate(from || roleHomePath(data?.user?.role), { replace: true });
           } catch (e) {
             const msg =
               e?.response?.data?.message ||
               e?.response?.data?.error ||
-              (e?.response?.status === 401 ? "Invalid username or password." : "") ||
-              e?.message ||
+              (e?.response?.status === 401 ? "Invalid email or password." : "") ||
+              e.message ||
               "Sign in failed. Please try again.";
             setAuthError(msg);
             // Mark fields invalid without duplicating the message under each input.
-            setError("username", { type: "manual", message: " " });
+            setError("email", { type: "manual", message: " " });
             setError("password", { type: "manual", message: " " });
           }
         })}
       >
         <div>
-          <label className="text-sm font-semibold text-slate-800">Username or Email</label>
+          <label className="text-sm font-semibold text-slate-800">Email Address</label>
           <input
             className="mt-1 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:border-blue-500"
-            {...register("username", { required: "Username is required" })}
-            placeholder="e.g., admin or staff@school.com"
+            {...register("email", { required: "Email is required" })}
+            placeholder="e.g., staff@school.com"
+            type="email"
           />
-          {errors.username && (
-            <div className="mt-1 text-xs text-rose-700">{errors.username.message}</div>
+          {errors.email && (
+            <div className="mt-1 text-xs text-rose-700">{errors.email.message}</div>
           )}
         </div>
 
