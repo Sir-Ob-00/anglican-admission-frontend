@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { listNotifications } from "../../services/notificationService";
 import { cx, formatDate } from "../../utils/helpers";
+import Modal from "../common/Modal";
 
 function roleLabel(role) {
   const normalizedRole = role?.toLowerCase();
@@ -25,6 +26,7 @@ export default function Navbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -44,8 +46,9 @@ export default function Navbar({ onToggleSidebar }) {
   const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
   return (
-    <header className="sticky top-3 z-20">
-      <div className="flex items-center gap-3 rounded-3xl border border-white/40 bg-white/60 px-3 py-3 shadow-lg backdrop-blur-xl md:px-4">
+    <>
+      <header className="sticky top-3 z-20">
+        <div className="flex items-center gap-3 rounded-3xl border border-white/40 bg-white/60 px-3 py-3 shadow-lg backdrop-blur-xl md:px-4">
         <button
           type="button"
           className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-800 md:hidden"
@@ -107,71 +110,91 @@ export default function Navbar({ onToggleSidebar }) {
               </span>
             </button>
 
-            {open && (
-              <div
-                role="menu"
-                className="absolute right-0 mt-2 w-[320px] overflow-hidden rounded-3xl border border-white/40 bg-white/90 shadow-2xl backdrop-blur-xl"
-              >
-                <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3">
-                  <div className="font-semibold text-slate-900">Recent alerts</div>
-                  <Link
-                    to="/notifications"
-                    className="text-sm font-semibold text-[color:var(--brand)] hover:underline"
-                    onClick={() => setOpen(false)}
-                  >
-                    View all
-                  </Link>
-                </div>
-                <div className="max-h-[320px] overflow-auto p-2">
-                  {items.length === 0 ? (
-                    <div className="p-3 text-sm text-slate-600">No notifications.</div>
-                  ) : (
-                    items.map((n) => (
-                      <div
-                        key={n._id || n.id}
-                        className={cx(
-                          "rounded-2xl p-3 text-sm",
-                          n.read ? "text-slate-700" : "bg-[color:var(--bg0)] text-slate-900"
-                        )}
-                      >
-                        <div className="leading-snug">{n.message}</div>
-                        <div className="mt-1 text-xs text-slate-500">{formatDate(n.createdAt)}</div>
-                        {n.link?.url ? (
-                          <Link
-                            to={n.link.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-2 inline-flex text-xs font-semibold text-[color:var(--brand)] hover:underline"
-                            onClick={() => setOpen(false)}
-                          >
-                            {n.link.label || "Open"}
-                          </Link>
-                        ) : null}
+          {open && (
+            <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white/95 p-4 shadow-xl backdrop-blur-md">
+              <h4 className="font-semibold text-slate-900">Notifications</h4>
+              <div className="mt-2 space-y-2">
+                {items.length ? (
+                  items.map((item) => (
+                    <div key={item._id} className="rounded-2xl bg-white/60 p-3">
+                      <div className="font-semibold text-slate-900">{item.title || 'Notification'}</div>
+                      <div className="mt-1 text-xs text-slate-600">
+                        {formatDate(item.createdAt)}
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl bg-white/60 p-3 text-slate-600">
+                    No notifications
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          <div className="hidden rounded-2xl bg-white/60 px-3 py-2 text-sm text-slate-700 md:block">
-            <div className="font-semibold text-slate-900">{user?.name || "User"}</div>
-            <div className="text-xs">{roleLabel(role)}</div>
-          </div>
+        <div className="hidden rounded-2xl bg-white/60 px-3 py-2 text-sm text-slate-700 md:block">
+          <div className="font-semibold text-slate-900">{user?.name || "User"}</div>
+          <div className="text-xs">{roleLabel(role)}</div>
+        </div>
 
+        <button
+          type="button"
+          className="inline-flex h-10 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white shadow-sm hover:brightness-110"
+          onClick={() => {
+            logout();
+            setShowLogoutModal(true);
+            setTimeout(() => {
+              navigate("/", { replace: true });
+            }, 2000); // Navigate after 2 seconds
+          }}
+        >
+          Logout
+        </button>
+        </div>
+      </div>
+    </header>
+
+    {/* Logout Success Modal */}
+    <Modal
+      open={showLogoutModal}
+      title="Logout Successful"
+      onClose={() => {
+        setShowLogoutModal(false);
+        navigate("/", { replace: true });
+      }}
+      footer={
+        <div className="flex justify-end">
           <button
             type="button"
             className="inline-flex h-10 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white shadow-sm hover:brightness-110"
             onClick={() => {
-              logout();
+              setShowLogoutModal(false);
               navigate("/", { replace: true });
             }}
           >
-            Logout
+            OK
           </button>
         </div>
+      }
+    >
+      <div className="text-center space-y-4">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+          <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">Successfully Logged Out</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            Thank you for using the Anglican Admission System. You have been successfully logged out.
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Redirecting to login page...
+          </p>
+        </div>
       </div>
-    </header>
+    </Modal>
+    </>
   );
 }

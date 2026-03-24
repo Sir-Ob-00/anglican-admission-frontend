@@ -1,6 +1,6 @@
 import api from "./api";
 
-// Create a new user (Admin only)
+// Admin endpoints
 export async function createUser(userData) {
   const res = await api.post("/admin/users", userData);
   return res.data;
@@ -8,15 +8,13 @@ export async function createUser(userData) {
 
 // Get all users (Admin only)
 export async function listUsers(params) {
-  console.log("adminService.listUsers called with params:", params);
-  console.log("Making API call to: /admin/users");
-  
   const res = await api.get("/admin/users", { params });
-  
-  console.log("API response status:", res.status);
-  console.log("API response data:", res.data);
-  console.log("Full response:", res);
-  
+  return res.data;
+}
+
+// Get all users (Headteacher & Assistant Headteacher)
+export async function listAllUsers(params) {
+  const res = await api.get("/admin/users", { params });
   return res.data;
 }
 

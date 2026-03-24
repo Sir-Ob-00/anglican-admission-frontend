@@ -4,7 +4,7 @@ import Panel from "../../components/common/Panel";
 import { linkParentToStudent } from "../../services/parentService";
 import { listUsers } from "../../services/userService";
 import { listStudents } from "../../services/studentService";
-import { listClasses } from "../../services/classService";
+import { listHeadteacherClasses } from "../../services/classService";
 
 const fallbackTabs = ["JHS1A", "JHS1B", "JHS2A", "JHS2B"];
 
@@ -30,7 +30,7 @@ export default function LinkParent() {
     (async () => {
       try {
         const [classRes, studentRes, parentRes] = await Promise.all([
-          listClasses(),
+          listHeadteacherClasses(),
           listStudents(),
           listUsers({ role: "parent" }),
         ]);

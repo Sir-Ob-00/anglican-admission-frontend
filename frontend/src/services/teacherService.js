@@ -5,6 +5,17 @@ export async function listTeachers() {
   return res.data;
 }
 
+// Headteacher specific endpoints
+export async function listAllTeachers() {
+  const res = await api.get("/headteacher/teacher/all");
+  return res.data;
+}
+
+export async function getTeacherById(id) {
+  const res = await api.get(`/headteacher/teacher/${id}`);
+  return res.data;
+}
+
 export async function createTeacher(payload) {
   const res = await api.post("/teachers", payload);
   return res.data;
@@ -27,5 +38,14 @@ export async function deactivateTeacher(id) {
 
 export async function resetTeacherPassword(id, newPassword) {
   const res = await api.post(`/teachers/${id}/reset-password`, { newPassword });
+  return res.data;
+}
+export async function assignTeacher(payload) {
+  const res = await api.post("/headteacher/teacher/assign-teacher", payload);
+  return res.data;
+}
+
+export async function updateTeacherAssignment(payload) {
+  const res = await api.put("/headteacher/teacher/update-assignment", payload);
   return res.data;
 }

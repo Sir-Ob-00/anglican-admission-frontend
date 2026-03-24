@@ -194,7 +194,7 @@ export default function Dashboard() {
           // Also fetch classes for "Class Applying For" field
           try {
             console.log("Fetching classes for headteacher...");
-            const classesData = await classService.listClasses();
+            const classesData = await classService.listHeadteacherClasses();
             const classesArray = Array.isArray(classesData) ? classesData : classesData.items || [];
             console.log("Classes data:", classesArray);
             if (!ignore) setClasses(classesArray);
@@ -210,7 +210,7 @@ export default function Dashboard() {
           // Also fetch classes for "Class Applying For" field
           try {
             console.log("Fetching classes for assistant headteacher...");
-            const classesData = await classService.listClasses();
+            const classesData = await classService.listHeadteacherClasses();
             const classesArray = Array.isArray(classesData) ? classesData : classesData.items || [];
             console.log("Classes data:", classesArray);
             if (!ignore) setClasses(classesArray);

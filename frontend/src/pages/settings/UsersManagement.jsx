@@ -34,9 +34,14 @@ export default function UsersManagement() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        console.log("Fetching initial users list...");
-        console.log("Calling adminService.listUsers()...");
-        const data = await adminService.listUsers();
+        console.log("Fetching users list...");
+        console.log("Calling adminService for role:", role);
+        
+        // Use appropriate endpoint based on role
+        const data = role === "admin" 
+          ? await adminService.listUsers()
+          : await adminService.listAllUsers();
+          
         console.log("Users data received:", data);
         console.log("Data type:", typeof data);
         console.log("Is array:", Array.isArray(data));
@@ -171,14 +176,13 @@ export default function UsersManagement() {
               className="inline-flex h-9 items-center justify-center rounded-2xl bg-slate-900/5 px-3 text-xs font-semibold text-slate-800 hover:bg-slate-900/10"
               onClick={() => {
                 setEditingUser(r);
-                resetEdit({
+                setEditValues({
                   name: r.name || "",
-                  username: r.username || "",
                   email: r.email || "",
-                  role: r.role || "parent",
                   password: "",
-                  twoFA: Boolean(r.twoFactorEnabled),
-                  isActive: Boolean(r.isActive),
+                  role: r.role || "teacher",
+                  twoFA: Boolean(r.mfa_enabled || r.twoFactorEnabled),
+                  isActive: Boolean(r.isActive !== false),
                 });
                 setIsEditOpen(true);
               }}
@@ -187,14 +191,19 @@ export default function UsersManagement() {
             </button>
             <button
               type="button"
-              className="inline-flex h-9 items-center justify-center rounded-2xl bg-slate-900/5 px-3 text-xs font-semibold text-slate-800 hover:bg-slate-900/10"
+              className="inline-flex h-9 items-center justify-center rounded-2xl bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700"
               onClick={async () => {
-                try {
-                  await adminService.updateUser(r._id || r.id, { twoFactorEnabled: !r.twoFactorEnabled });
-                  const data = await adminService.listUsers();
-                  setRows(Array.isArray(data) ? data : data.items || []);
-                } catch {
-                  alert("Update failed. Check backend permissions.");
+                if (window.confirm(`Enable 2FA for ${r.name}?`)) {
+                  try {
+                    await adminService.updateUser(r._id || r.id, { twoFactorEnabled: true });
+                    const data = role === "admin" 
+                      ? await adminService.listUsers()
+                      : await adminService.listAllUsers();
+                    setRows(Array.isArray(data) ? data : data.users || data.items || []);
+                    alert("2FA enabled!");
+                  } catch {
+                    alert("Failed to enable 2FA.");
+                  }
                 }
               }}
             >
@@ -207,7 +216,9 @@ export default function UsersManagement() {
                 if (window.confirm(`Are you sure you want to delete user "${r.name}"? This action cannot be undone.`)) {
                   try {
                     await adminService.deleteUser(r._id || r.id);
-                    const data = await adminService.listUsers();
+                    const data = role === "admin" 
+                      ? await adminService.listUsers()
+                      : await adminService.listAllUsers();
                     setRows(Array.isArray(data) ? data : data.users || data.items || []);
                     alert('User deleted successfully!');
                   } catch {
@@ -220,7 +231,7 @@ export default function UsersManagement() {
             </button>
           </div>
         ) : (
-          <span className="text-xs text-slate-500">View only</span>
+          <span className="text-xs text-slate-500 font-medium">Admin Only</span>
         ),
       },
     ],
@@ -235,7 +246,10 @@ export default function UsersManagement() {
         <button
           onClick={async () => {
             try {
-              const data = await adminService.listUsers();
+              // Use appropriate endpoint based on role
+              const data = role === "admin" 
+                ? await adminService.listUsers()
+                : await adminService.listAllUsers();
               setRows(Array.isArray(data) ? data : data.users || data.items || []);
               alert('Users list refreshed!');
             } catch (error) {
@@ -467,7 +481,9 @@ export default function UsersManagement() {
               };
               if (values.password) payload.password = values.password;
               await adminService.updateUser(editingUser._id || editingUser.id, payload);
-              const data = await adminService.listUsers();
+              const data = role === "admin" 
+                ? await adminService.listUsers()
+                : await adminService.listAllUsers();
               setRows(Array.isArray(data) ? data : data.users || data.items || []);
               setIsEditOpen(false);
             } catch {

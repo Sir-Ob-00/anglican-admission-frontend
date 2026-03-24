@@ -13,7 +13,7 @@ import { approveAdmission } from "../../services/admissionService";
 import ApplicantForm from "../../components/forms/ApplicantForm";
 import { listTeachers } from "../../services/teacherService";
 import { listUsers } from "../../services/userService";
-import { listClasses } from "../../services/classService";
+import { listHeadteacherClasses } from "../../services/classService";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 export default function ApplicantDetails() {
@@ -58,7 +58,7 @@ export default function ApplicantDetails() {
     let ignore = false;
     (async () => {
       try {
-        const data = await listClasses();
+        const data = await listHeadteacherClasses();
         const items = Array.isArray(data) ? data : data.items || [];
         if (!ignore) {
           setClasses(items);
