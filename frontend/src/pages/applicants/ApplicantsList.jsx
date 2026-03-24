@@ -11,6 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 export default function ApplicantsList() {
   const navigate = useNavigate();
   const { role } = useAuth();
+  const isHeadteacher = role === "headteacher" || role === "assistant_headteacher" || role === "assistantHeadteacher";
   const [searchParams] = useSearchParams();
   const [rows, setRows] = useState([]);
   const [confirm, setConfirm] = useState(null);
@@ -52,13 +53,21 @@ export default function ApplicantsList() {
     let ignore = false;
     (async () => {
       try {
-        const data = await applicantService.listApplicants(status ? { status } : undefined);
-        const items = Array.isArray(data) ? data : data.items || [];
+        if (!isHeadteacher) {
+          if (!ignore) setRows([]);
+          return;
+        }
+        
+        const data = await applicantService.listHeadteacherApplicants(status ? { status } : undefined);
+        const items = Array.isArray(data) ? data : data.items || data.applicants || [];
         if (!ignore) {
           setRows(
             items.map((a) => ({
               ...a,
               id: a.id || a._id,
+              fullName: a.fullName || a.full_name,
+              classApplyingFor: a.classApplyingFor || a.class_applied || a.class?.name || "",
+              createdAt: a.createdAt || a.created_at,
             }))
           );
         }
@@ -110,7 +119,7 @@ export default function ApplicantsList() {
                 Conduct
               </button>
             ) : null}
-            {role === "headteacher" ? (
+            {isHeadteacher ? (
               <button
                 type="button"
                 className="inline-flex h-9 items-center justify-center rounded-2xl bg-rose-600 px-3 text-xs font-semibold text-white hover:bg-rose-700"
@@ -139,7 +148,7 @@ export default function ApplicantsList() {
             : "Search, review, and manage admission applicants."
         }
         right={
-          role === "headteacher" || role === "assistantHeadteacher" ? (
+          isHeadteacher ? (
             <button
               type="button"
               className="inline-flex h-11 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-5 text-sm font-semibold text-white shadow-sm hover:brightness-110"
@@ -188,7 +197,9 @@ export default function ApplicantsList() {
           const target = confirm;
           setConfirm(null);
           try {
-            await applicantService.deleteApplicant(target.id);
+            if (isHeadteacher) {
+              await applicantService.deleteHeadteacherApplicant(target.id);
+            }
             setRows((r) => r.filter((x) => x.id !== target.id));
           } catch {
             setRows((r) => r.filter((x) => x.id !== target.id));

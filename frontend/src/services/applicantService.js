@@ -1,26 +1,30 @@
 import api from "./api";
 
-export async function listApplicants(params) {
-  const res = await api.get("/api/applicants", { params });
+// ============================================
+// HEADTEACHER / ASSISTANT HEADTEACHER ENDPOINTS
+// ============================================
+
+export async function listHeadteacherApplicants(params) {
+  const res = await api.get("/headteacher/applicants", { params });
   return res.data;
 }
 
-export async function getApplicant(id) {
-  const res = await api.get(`/api/applicants/${id}`);
+export async function getHeadteacherApplicantById(id) {
+  const res = await api.get(`/headteacher/applicants/${id}`);
   return res.data;
 }
 
-export async function createApplicant(payload) {
-  const res = await api.post("/api/applicants", payload);
+export async function createHeadteacherApplicant(payload) {
+  const res = await api.post("/headteacher/applicants", payload);
   return res.data;
 }
 
-export async function updateApplicant(id, payload) {
-  const res = await api.put(`/api/applicants/${id}`, payload);
+export async function updateHeadteacherApplicant(id, payload) {
+  const res = await api.patch(`/headteacher/applicants/${id}`, payload);
   return res.data;
 }
 
-export async function deleteApplicant(id) {
-  const res = await api.delete(`/api/applicants/${id}`);
+export async function deleteHeadteacherApplicant(id) {
+  const res = await api.delete(`/headteacher/applicants/${id}`);
   return res.data;
 }

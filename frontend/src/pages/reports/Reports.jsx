@@ -4,7 +4,7 @@ import PageHeader from "../../components/common/PageHeader";
 import Panel from "../../components/common/Panel";
 import { getReports } from "../../services/reportService";
 import { useAuth } from "../../context/AuthContext";
-import { listApplicants } from "../../services/applicantService";
+// import { listApplicants } from "../../services/applicantService";
 import { listPayments } from "../../services/paymentService";
 import { downloadAdmissionConfirmation } from "../../services/admissionService";
 import { formatDate } from "../../utils/helpers";
@@ -49,8 +49,8 @@ export default function Reports() {
     let ignore = false;
     (async () => {
       try {
-        const [a, p] = await Promise.all([listApplicants(), listPayments()]);
-        const aItems = Array.isArray(a) ? a : a.items || [];
+        const [a, p] = await Promise.all([Promise.resolve([]), listPayments()]);
+        const aItems = Array.isArray(a) ? a : a.items || a.applicants || [];
         const pItems = Array.isArray(p) ? p : p.items || [];
         if (!ignore) {
           setMyApplicants(aItems);

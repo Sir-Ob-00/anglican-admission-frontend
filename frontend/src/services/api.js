@@ -26,6 +26,11 @@ api.interceptors.response.use(
   },
   (error) => {
     console.log(`API Error: ${error.response?.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+    if (error.response?.status === 401) {
+      console.log("401 Unauthorized - Token expired or invalid");
+      window.dispatchEvent(new Event("tokenExpired"));
+    }
+
     if (error.response?.status === 403) {
       console.log("403 Forbidden - Possible issues:");
       console.log("1. Token expired");

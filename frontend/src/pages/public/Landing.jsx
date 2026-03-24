@@ -1,10 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import PublicNavbar from "../../components/layout/PublicNavbar";
 import StaffSignInModal from "../../components/auth/StaffSignInModal";
+import Modal from "../../components/common/Modal";
 import hero from "../../assets/images/anglican.webp";
 
 export default function Landing({ initialOpen = false }) {
   const [open, setOpen] = useState(Boolean(initialOpen));
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.loggedOut) {
+      setShowLogoutModal(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   return (
     <div className="min-h-full bg-white">
@@ -47,6 +59,25 @@ export default function Landing({ initialOpen = false }) {
       </main>
 
       <StaffSignInModal open={open} onClose={() => setOpen(false)} />
+
+      <Modal
+        open={showLogoutModal}
+        title="Logout Successful"
+        onClose={() => setShowLogoutModal(false)}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-[color:var(--brand)] px-5 text-sm font-semibold text-white hover:brightness-110"
+              onClick={() => setShowLogoutModal(false)}
+            >
+              Okay
+            </button>
+          </div>
+        }
+      >
+        <div className="text-sm text-slate-600">You have been securely signed out of your account.</div>
+      </Modal>
     </div>
   );
 }

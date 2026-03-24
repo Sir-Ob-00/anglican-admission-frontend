@@ -31,6 +31,10 @@ export default function TeachersList() {
   const [assignedClass, setAssignedClass] = useState("");
   const [assignedClassName, setAssignedClassName] = useState("");
   const [allTeachers, setAllTeachers] = useState([]);
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   async function refresh() {
     try {
@@ -137,8 +141,11 @@ export default function TeachersList() {
                       try {
                         await activateTeacher(r._id || r.id);
                         await refresh();
-                      } catch {
-                        alert("Activate failed.");
+                        setSuccessMessage("Teacher activated successfully!");
+                        setSuccessModalOpen(true);
+                      } catch (err) {
+                        setErrorMessage(err.response?.data?.message || "Activate failed.");
+                        setErrorModalOpen(true);
                       }
                     }}
                   >
@@ -152,8 +159,11 @@ export default function TeachersList() {
                       try {
                         await deactivateTeacher(r._id || r.id);
                         await refresh();
-                      } catch {
-                        alert("Deactivate failed.");
+                        setSuccessMessage("Teacher deactivated successfully!");
+                        setSuccessModalOpen(true);
+                      } catch (err) {
+                        setErrorMessage(err.response?.data?.message || "Deactivate failed.");
+                        setErrorModalOpen(true);
                       }
                     }}
                   >
@@ -237,8 +247,11 @@ export default function TeachersList() {
                   await resetTeacherPassword(resetTeacher?._id || resetTeacher?.id, newPassword);
                   setResetOpen(false);
                   await refresh();
-                } catch {
-                  alert("Reset password failed.");
+                  setSuccessMessage("Password reset successfully!");
+                  setSuccessModalOpen(true);
+                } catch (err) {
+                  setErrorMessage(err.response?.data?.message || "Reset password failed.");
+                  setErrorModalOpen(true);
                 }
               }}
               disabled={!newPassword}
@@ -306,8 +319,11 @@ export default function TeachersList() {
                   }
                   await refresh();
                   setEditOpen(false);
+                  setSuccessMessage(editing ? "Teacher updated successfully!" : "Teacher added successfully!");
+                  setSuccessModalOpen(true);
                 } catch (err) {
-                  alert(err.response?.data?.message || err.message || "Save failed.");
+                  setErrorMessage(err.response?.data?.message || err.message || "Save failed.");
+                  setErrorModalOpen(true);
                 }
               }}
             >
@@ -401,6 +417,70 @@ export default function TeachersList() {
               disabled
               placeholder="No class assigned"
             />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        open={successModalOpen}
+        title="Success"
+        onClose={() => setSuccessModalOpen(false)}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-2xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
+              onClick={() => setSuccessModalOpen(false)}
+            >
+              OK
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
+            <svg className="h-8 w-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Success</h3>
+            <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">
+              {successMessage}
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        open={errorModalOpen}
+        title="Action Failed"
+        onClose={() => setErrorModalOpen(false)}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-2xl bg-red-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-red-700"
+              onClick={() => setErrorModalOpen(false)}
+            >
+              OK
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+            <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Error</h3>
+            <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">
+              {errorMessage}
+            </p>
           </div>
         </div>
       </Modal>

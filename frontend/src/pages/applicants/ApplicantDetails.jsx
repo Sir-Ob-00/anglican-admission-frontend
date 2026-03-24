@@ -21,6 +21,7 @@ export default function ApplicantDetails() {
   const [applicant, setApplicant] = useState(null);
   const [loadError, setLoadError] = useState("");
   const { role } = useAuth();
+  const isHeadteacher = role === "headteacher" || role === "assistant_headteacher" || role === "assistantHeadteacher";
   const [assignOpen, setAssignOpen] = useState(false);
   const [exams, setExams] = useState([]);
   const [selectedExamId, setSelectedExamId] = useState("");
@@ -32,14 +33,38 @@ export default function ApplicantDetails() {
   const [confirmApprove, setConfirmApprove] = useState(false);
   const [approvalError, setApprovalError] = useState("");
 
+  const mapApplicantData = (data) => {
+    const a = data?.applicant || data;
+    if (!a) return null;
+    return {
+      ...a,
+      id: a.id || a._id,
+      fullName: a.fullName || a.full_name,
+      dateOfBirth: a.dateOfBirth || a.dob,
+      gender: a.gender?.toUpperCase() || a.gender,
+      classApplyingFor: a.classApplyingFor || a.class_applied || a.class?.name || "",
+      parentName: a.parentName || a.parent_name,
+      parentContact: a.parentContact || a.parent_contact,
+      address: a.address,
+    };
+  };
+
   useEffect(() => {
     let ignore = false;
     (async () => {
       try {
-        const data = await applicantService.getApplicant(id);
+        if (!isHeadteacher) {
+          if (!ignore) {
+            setLoadError("You do not have permission to view this applicant.");
+            setApplicant(null);
+          }
+          return;
+        }
+
+        const data = await applicantService.getHeadteacherApplicantById(id);
         if (!ignore) {
           setLoadError("");
-          setApplicant(data);
+          setApplicant(mapApplicantData(data));
         }
       } catch {
         if (!ignore) {
@@ -54,12 +79,12 @@ export default function ApplicantDetails() {
   }, [id]);
 
   useEffect(() => {
-    if (role !== "headteacher") return;
+    if (!isHeadteacher) return;
     let ignore = false;
     (async () => {
       try {
         const data = await listHeadteacherClasses();
-        const items = Array.isArray(data) ? data : data.items || [];
+        const items = Array.isArray(data) ? data : data.classes || data.items || data.data || [];
         if (!ignore) {
           setClasses(items);
           if (!classAssigned && applicant?.classApplyingFor) {
@@ -355,8 +380,8 @@ export default function ApplicantDetails() {
                     examId: selectedExamId,
                     supervisorUserId: selectedSupervisorId,
                   });
-                  const refreshed = await applicantService.getApplicant(id);
-                  setApplicant(refreshed);
+                  const refreshed = await applicantService.getHeadteacherApplicantById(id);
+                  setApplicant(mapApplicantData(refreshed));
                   setAssignOpen(false);
                 } catch {
                   alert("Assign exam failed.");
@@ -408,13 +433,29 @@ export default function ApplicantDetails() {
         onClose={() => setEditOpen(false)}
       >
         <ApplicantForm
+          classes={classes}
           initialValues={applicant}
           submitLabel="Save Changes"
           onSubmit={async (values) => {
             try {
-              await applicantService.updateApplicant(id, values);
-              const refreshed = await applicantService.getApplicant(id);
-              setApplicant(refreshed);
+              if (!isHeadteacher) {
+                alert("You do not have permission to edit this applicant.");
+                return;
+              }
+
+              const payload = {
+                full_name: values.fullName,
+                dob: values.dateOfBirth,
+                gender: values.gender,
+                class_applied: values.classApplyingFor,
+                parent_name: values.parentName,
+                parent_contact: values.parentContact,
+                address: values.address,
+              };
+              await applicantService.updateHeadteacherApplicant(id, payload);
+              const refreshed = await applicantService.getHeadteacherApplicantById(id);
+              
+              setApplicant(mapApplicantData(refreshed));
               setEditOpen(false);
             } catch {
               alert("Update failed.");
@@ -434,8 +475,8 @@ export default function ApplicantDetails() {
           setConfirmApprove(false);
           try {
             await approveAdmission(id, classAssigned ? { classAssigned } : undefined);
-            const refreshed = await applicantService.getApplicant(id);
-            setApplicant(refreshed);
+            const refreshed = await applicantService.getHeadteacherApplicantById(id);
+            setApplicant(mapApplicantData(refreshed));
           } catch (e) {
             setApprovalError(e?.response?.data?.message || "Admission approval failed. Ensure payment is verified.");
           }

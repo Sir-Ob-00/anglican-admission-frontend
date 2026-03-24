@@ -66,7 +66,7 @@ export default function StaffSignInModal({ open, onClose }) {
             // Normal login flow - no MFA required
             console.log("No MFA required in StaffSignInModal, normal login flow");
             onClose?.();
-            navigate(from || roleHomePath(data?.user?.role), { replace: true });
+            navigate(from || roleHomePath(data?.user?.role), { replace: true, state: { loggedIn: true } });
           } catch (e) {
             const msg =
               e?.response?.data?.message ||

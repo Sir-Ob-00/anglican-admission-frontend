@@ -4,7 +4,7 @@ import PageHeader from "../../components/common/PageHeader";
 import Panel from "../../components/common/Panel";
 import Badge from "../../components/common/Badge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
-import { getApplicant } from "../../services/applicantService";
+import { getHeadteacherApplicantById } from "../../services/applicantService";
 import { decideExamResult, recommendExamResult } from "../../services/examResultService";
 import { useAuth } from "../../context/AuthContext";
 
@@ -19,8 +19,15 @@ export default function ApplicantReview() {
     let ignore = false;
     (async () => {
       try {
-        const data = await getApplicant(id);
-        if (!ignore) setApplicant(data);
+        const data = await getHeadteacherApplicantById(id);
+        const a = data?.applicant || data;
+        if (!ignore && a) {
+          setApplicant({
+            ...a,
+            id: a.id || a._id,
+            fullName: a.fullName || a.full_name,
+          });
+        }
       } catch {
         if (!ignore) setApplicant(null);
       }

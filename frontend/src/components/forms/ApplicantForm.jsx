@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 
-export default function ApplicantForm({ initialValues, onSubmit, submitLabel = "Save Applicant" }) {
+export default function ApplicantForm({ initialValues, onSubmit, submitLabel = "Save Applicant", classes = [] }) {
   const today = new Date();
   const formatDateInput = (date) => {
     const year = date.getFullYear();
@@ -31,7 +31,7 @@ export default function ApplicantForm({ initialValues, onSubmit, submitLabel = "
     defaultValues: {
       fullName: initialValues?.fullName || "",
       dateOfBirth: initialValues?.dateOfBirth || "",
-      gender: initialValues?.gender || "male",
+      gender: initialValues?.gender || "MALE",
       classApplyingFor: initialValues?.classApplyingFor || "",
       parentName: initialValues?.parentName || "",
       parentContact: initialValues?.parentContact || "",
@@ -85,19 +85,32 @@ export default function ApplicantForm({ initialValues, onSubmit, submitLabel = "
           className="mt-1 h-11 w-full rounded-2xl border border-slate-200/70 bg-white/80 px-3 text-slate-900 outline-none focus:border-[color:var(--brand)]"
           {...register("gender", { required: true })}
         >
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="other">Other</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
         </select>
       </div>
 
       <div>
         <label className="text-sm font-semibold text-slate-800">Class Applying For</label>
-        <input
-          className="mt-1 h-11 w-full rounded-2xl border border-slate-200/70 bg-white/80 px-3 text-slate-900 outline-none focus:border-[color:var(--brand)]"
-          {...register("classApplyingFor", { required: "Class is required" })}
-          placeholder="e.g., Primary 3"
-        />
+        {classes.length > 0 ? (
+          <select
+            className="mt-1 h-11 w-full rounded-2xl border border-slate-200/70 bg-white/80 px-3 text-slate-900 outline-none focus:border-[color:var(--brand)]"
+            {...register("classApplyingFor", { required: "Class is required" })}
+          >
+            <option value="">Select a class</option>
+            {classes.map((c) => (
+              <option key={c.id || c._id} value={c.id || c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className="mt-1 h-11 w-full rounded-2xl border border-slate-200/70 bg-white/80 px-3 text-slate-900 outline-none focus:border-[color:var(--brand)]"
+            {...register("classApplyingFor", { required: "Class is required" })}
+            placeholder="e.g., Primary 3"
+          />
+        )}
         {errors.classApplyingFor && (
           <div className="mt-1 text-xs text-rose-700">{errors.classApplyingFor.message}</div>
         )}
@@ -107,16 +120,23 @@ export default function ApplicantForm({ initialValues, onSubmit, submitLabel = "
         <label className="text-sm font-semibold text-slate-800">Parent Name</label>
         <input
           className="mt-1 h-11 w-full rounded-2xl border border-slate-200/70 bg-white/80 px-3 text-slate-900 outline-none focus:border-[color:var(--brand)]"
-          {...register("parentName")}
+          {...register("parentName", { required: "Parent name is required" })}
           placeholder="e.g., Mrs. Okafor"
         />
+        {errors.parentName && (
+          <div className="mt-1 text-xs text-rose-700">{errors.parentName.message}</div>
+        )}
       </div>
 
       <div>
         <label className="text-sm font-semibold text-slate-800">Parent Contact</label>
         <input
           className="mt-1 h-11 w-full rounded-2xl border border-slate-200/70 bg-white/80 px-3 text-slate-900 outline-none focus:border-[color:var(--brand)]"
-          {...register("parentContact", { required: "Parent contact is required" })}
+          {...register("parentContact", { 
+            required: "Parent contact is required",
+            maxLength: { value: 15, message: "Contact cannot exceed 15 characters" },
+            minLength: { value: 1, message: "Contact cannot be empty" }
+          })}
           placeholder="+234..."
         />
         {errors.parentContact && (

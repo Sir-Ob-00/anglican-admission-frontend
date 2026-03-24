@@ -14,6 +14,8 @@ export default function ClassesList() {
   const [assignTeacherOpen, setAssignTeacherOpen] = useState(false);
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState(40);
   const [teacherId, setTeacherId] = useState("");
@@ -120,8 +122,11 @@ export default function ClassesList() {
                         try {
                           await deleteHeadteacherClass(r._id || r.id);
                           await refresh();
+                          setSuccessMessage("Class deleted successfully!");
+                          setSuccessModalOpen(true);
                         } catch (err) {
-                          alert("Failed to delete class.");
+                          setErrorMessage(err.response?.data?.message || "Failed to delete class.");
+                          setErrorModalOpen(true);
                         }
                       }
                     }}
@@ -188,7 +193,8 @@ export default function ClassesList() {
                 });
 
                 if (isDuplicate) {
-                  alert("A class with this name already exists.");
+                  setErrorMessage("A class with this name already exists.");
+                  setErrorModalOpen(true);
                   return;
                 }
 
@@ -200,6 +206,8 @@ export default function ClassesList() {
                   }
                   await refresh();
                   setOpen(false);
+                  setSuccessMessage(editing ? "Class updated successfully!" : "Class created successfully!");
+                  setSuccessModalOpen(true);
                 } catch (error) {
                   const errorMsg = error.response?.data?.message || "Save failed.";
                   setErrorMessage(errorMsg);
@@ -289,9 +297,11 @@ export default function ClassesList() {
                   await assignTeacherToClass(payload);
                   await refresh();
                   setAssignTeacherOpen(false);
-                  alert("Teacher assigned successfully!");
-                } catch {
-                  alert("Assignment failed.");
+                  setSuccessMessage("Teacher assigned successfully!");
+                  setSuccessModalOpen(true);
+                } catch (error) {
+                  setErrorMessage(error.response?.data?.message || "Assignment failed.");
+                  setErrorModalOpen(true);
                 }
               }}
               disabled={!teacherUniqueId || !selectedClass}
@@ -334,6 +344,38 @@ export default function ClassesList() {
               onChange={(e) => setSubjects(e.target.value.split(",").map(s => s.trim()).filter(s => s))}
               placeholder="e.g., Mathematics, Physics"
             />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        open={successModalOpen}
+        title="Success"
+        onClose={() => setSuccessModalOpen(false)}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-2xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
+              onClick={() => setSuccessModalOpen(false)}
+            >
+              OK
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
+            <svg className="h-8 w-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Success</h3>
+            <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">
+              {successMessage}
+            </p>
           </div>
         </div>
       </Modal>

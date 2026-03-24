@@ -7,6 +7,6 @@ export default function ProtectedRoute() {
   const location = useLocation();
 
   if (isBooting) return <Loader label="Loading session..." />;
-  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!isAuthenticated) return <Navigate to="/" replace state={{ from: location, loggedOut: true }} />;
   return <Outlet />;
 }

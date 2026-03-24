@@ -26,7 +26,6 @@ export default function Navbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -46,7 +45,6 @@ export default function Navbar({ onToggleSidebar }) {
   const unreadCount = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
   return (
-    <>
       <header className="sticky top-3 z-20">
         <div className="flex items-center gap-3 rounded-3xl border border-white/40 bg-white/60 px-3 py-3 shadow-lg backdrop-blur-xl md:px-4">
         <button
@@ -143,10 +141,6 @@ export default function Navbar({ onToggleSidebar }) {
           className="inline-flex h-10 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white shadow-sm hover:brightness-110"
           onClick={() => {
             logout();
-            setShowLogoutModal(true);
-            setTimeout(() => {
-              navigate("/", { replace: true });
-            }, 2000); // Navigate after 2 seconds
           }}
         >
           Logout
@@ -154,47 +148,5 @@ export default function Navbar({ onToggleSidebar }) {
         </div>
       </div>
     </header>
-
-    {/* Logout Success Modal */}
-    <Modal
-      open={showLogoutModal}
-      title="Logout Successful"
-      onClose={() => {
-        setShowLogoutModal(false);
-        navigate("/", { replace: true });
-      }}
-      footer={
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="inline-flex h-10 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white shadow-sm hover:brightness-110"
-            onClick={() => {
-              setShowLogoutModal(false);
-              navigate("/", { replace: true });
-            }}
-          >
-            OK
-          </button>
-        </div>
-      }
-    >
-      <div className="text-center space-y-4">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">Successfully Logged Out</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            Thank you for using the Anglican Admission System. You have been successfully logged out.
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Redirecting to login page...
-          </p>
-        </div>
-      </div>
-    </Modal>
-    </>
   );
 }

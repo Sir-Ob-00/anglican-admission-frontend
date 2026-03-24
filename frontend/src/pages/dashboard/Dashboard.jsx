@@ -124,7 +124,7 @@ function roleCards(role) {
         { title: "Admissions Completed", value: "0", tone: "teal" },
         { title: "Payments Completed", value: "0", tone: "brand" },
       ];
-    case "assistantHeadteacher":
+    case "assistant_headteacher":
       return [
         { title: "Awaiting Exam", value: "0", tone: "gold" },
         { title: "Results Pending", value: "0", tone: "brand" },
@@ -195,7 +195,7 @@ export default function Dashboard() {
           try {
             console.log("Fetching classes for headteacher...");
             const classesData = await classService.listHeadteacherClasses();
-            const classesArray = Array.isArray(classesData) ? classesData : classesData.items || [];
+            const classesArray = Array.isArray(classesData) ? classesData : classesData.classes || classesData.items || classesData.data || [];
             console.log("Classes data:", classesArray);
             if (!ignore) setClasses(classesArray);
           } catch (classesError) {
@@ -211,7 +211,7 @@ export default function Dashboard() {
           try {
             console.log("Fetching classes for assistant headteacher...");
             const classesData = await classService.listHeadteacherClasses();
-            const classesArray = Array.isArray(classesData) ? classesData : classesData.items || [];
+            const classesArray = Array.isArray(classesData) ? classesData : classesData.classes || classesData.items || classesData.data || [];
             console.log("Classes data:", classesArray);
             if (!ignore) setClasses(classesArray);
           } catch (classesError) {
@@ -287,10 +287,11 @@ export default function Dashboard() {
       return Array.from(byClass.values()).sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    // For headteacher role, use head data
-    if (normalizedRole === "headteacher" && head) {
-      const applicants = Array.isArray(head.applicantsByClass) ? head.applicantsByClass : [];
-      const admissions = Array.isArray(head.admissionsByClass) ? head.admissionsByClass : [];
+    // For headteacher and assistant headteacher roles, use their respective data
+    if ((normalizedRole === "headteacher" && head) || (normalizedRole === "assistant_headteacher" && assistant)) {
+      const source = normalizedRole === "headteacher" ? head : assistant;
+      const applicants = Array.isArray(source.applicantsByClass) ? source.applicantsByClass : [];
+      const admissions = Array.isArray(source.admissionsByClass) ? source.admissionsByClass : [];
       const byClass = new Map();
 
       for (const a of applicants) {

@@ -22,13 +22,23 @@ export default function Documents() {
     let ignore = false;
     (async () => {
       try {
-        const aPromise =
-          role === "parent" ? Promise.resolve({ items: [] }) : applicantService.listApplicants();
+        const aPromise = role === "parent" 
+          ? Promise.resolve({ items: [] }) 
+          : applicantService.listHeadteacherApplicants().catch(() => ({ items: [] }));
         const sPromise = role === "parent" ? listStudents() : Promise.resolve({ items: [] });
         const [a, s, d] = await Promise.all([aPromise, sPromise, documentService.listDocuments()]);
 
-        const aItems = Array.isArray(a) ? a : a.items || [];
-        if (!ignore) setApplicants(aItems || []);
+        const aItems = Array.isArray(a) ? a : a.items || a.applicants || [];
+        if (!ignore) {
+          setApplicants(
+            aItems.map((x) => ({
+              ...x,
+              id: x.id || x._id,
+              fullName: x.fullName || x.full_name,
+              classApplyingFor: x.classApplyingFor || x.class_applied || x.class?.name || "",
+            }))
+          );
+        }
 
         const sItems = Array.isArray(s) ? s : s.items || [];
         if (!ignore) setStudents(sItems || []);

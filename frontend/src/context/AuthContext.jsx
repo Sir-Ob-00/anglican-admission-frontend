@@ -43,8 +43,20 @@ export function AuthProvider({ children }) {
       }
     })();
 
+    const handleTokenExpired = () => {
+      localStorage.removeItem("aas_token");
+      localStorage.removeItem("aas_user");
+      localStorage.removeItem("aas_mfa_user");
+      localStorage.removeItem("aas_mfa_token");
+      setToken(null);
+      setUser(null);
+    };
+
+    window.addEventListener("tokenExpired", handleTokenExpired);
+
     return () => {
       ignore = true;
+      window.removeEventListener("tokenExpired", handleTokenExpired);
     };
   }, [token]);
 
