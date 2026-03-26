@@ -1,6 +1,15 @@
 import api from "./api";
 
 // ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
+export async function listAdminApplicants(params) {
+  const res = await api.get("/applicants", { params });
+  return res.data;
+}
+
+// ============================================
 // HEADTEACHER / ASSISTANT HEADTEACHER ENDPOINTS
 // ============================================
 

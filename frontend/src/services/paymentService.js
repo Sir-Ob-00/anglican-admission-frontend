@@ -3,7 +3,7 @@ import api from "./api";
 // NEW PAYSTACK-BASED PAYMENT FUNCTIONS
 
 export async function initializeAdmissionPayment(applicantId) {
-  const res = await api.post("/payments/initialize", { applicantId });
+  const res = await api.post("/headteacher/payments/initiate", { applicantId });
   return res.data;
 }
 

@@ -11,6 +11,7 @@ import { listStudents } from "../../services/studentService";
 
 export default function ParentsList() {
   const [rows, setRows] = useState([]);
+  const [loadingParents, setLoadingParents] = useState(true);
   const [profiles, setProfiles] = useState([]);
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -26,32 +27,36 @@ export default function ParentsList() {
   } = useForm({ defaultValues: { phone: "", address: "" } });
 
   async function refresh() {
-    const [parentsRes, usersRes, studentsRes] = await Promise.all([
-      listParents(), 
-      listUsers({ role: "parent" }),
-      listStudents()
-    ]);
-    const parentItems = Array.isArray(parentsRes) ? parentsRes : parentsRes.items || [];
-    const userItems = Array.isArray(usersRes) ? usersRes : usersRes.items || [];
-    const studentItems = Array.isArray(studentsRes) ? studentsRes : studentsRes.items || [];
-    
-    setProfiles(parentItems);
-    setStudents(studentItems);
-    
-    // Extract unique classes from students
-    const uniqueClasses = [...new Set(studentItems.map(s => s.classAssigned?.name || s.admittedClass).filter(Boolean))];
-    setClasses(uniqueClasses.sort());
-    
-    const profileByUser = new Map(parentItems.map((p) => [String(p.user?._id || p.user), p]));
-    const merged = userItems.map((u) => ({
-      id: u._id || u.id,
-      name: u.name || u.username,
-      username: u.username,
-      email: u.email,
-      user: u,
-      profile: profileByUser.get(String(u._id || u.id)) || null,
-    }));
-    setRows(merged);
+    try {
+      setLoadingParents(true);
+      const [parentsRes, usersRes, studentsRes] = await Promise.all([
+        listParents(), 
+        listUsers({ role: "parent" }),
+        listStudents()
+      ]);
+      const parentItems = Array.isArray(parentsRes) ? parentsRes : parentsRes.items || [];
+      const userItems = Array.isArray(usersRes) ? usersRes : usersRes.items || [];
+      const studentItems = Array.isArray(studentsRes) ? studentsRes : studentsRes.items || [];
+      
+      setProfiles(parentItems);
+      setStudents(studentItems);
+      
+      const uniqueClasses = [...new Set(studentItems.map(s => s.classAssigned?.name || s.admittedClass).filter(Boolean))];
+      setClasses(uniqueClasses.sort());
+      
+      const profileByUser = new Map(parentItems.map((p) => [String(p.user?._id || p.user), p]));
+      const merged = userItems.map((u) => ({
+        id: u._id || u.id,
+        name: u.name || u.username,
+        username: u.username,
+        email: u.email,
+        user: u,
+        profile: profileByUser.get(String(u._id || u.id)) || null,
+      }));
+      setRows(merged);
+    } finally {
+      setLoadingParents(false);
+    }
   }
 
   useEffect(() => {
@@ -178,7 +183,13 @@ export default function ParentsList() {
         </Panel>
       )}
       
-      <Table title="Parents List" rows={filteredRows} columns={columns} />
+      <Table
+        title="Parents List"
+        rows={filteredRows}
+        columns={columns}
+        loading={loadingParents}
+        loadingText="Loading parents..."
+      />
 
       <Modal
         open={isOpen}

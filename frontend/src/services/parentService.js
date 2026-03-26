@@ -36,7 +36,7 @@ export async function getParentForApplicant(applicantId) {
 }
 
 export async function getApplicantsForParent(parentId) {
-  const res = await api.get(`/headteacher/parent-applicant/parent/${parentId}`);
+  const res = await api.get(`/headteacher/parent-applicant/parent/${parentId}/applicant`);
   return res.data;
 }
 

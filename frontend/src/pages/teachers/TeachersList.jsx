@@ -20,6 +20,7 @@ export default function TeachersList() {
   const { role } = useAuth();
   const isHeadteacher = role === "headteacher" || role === "assistant_headteacher";
   const [rows, setRows] = useState([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(true);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetTeacher, setResetTeacher] = useState(null);
   const [newPassword, setNewPassword] = useState("");
@@ -38,6 +39,7 @@ export default function TeachersList() {
 
   async function refresh() {
     try {
+      setLoadingTeachers(true);
       const data = isHeadteacher
         ? await listAllTeachers()
         : await listTeachers();
@@ -45,6 +47,8 @@ export default function TeachersList() {
       setRows(items);
     } catch {
       setRows([]);
+    } finally {
+      setLoadingTeachers(false);
     }
   }
 
@@ -224,7 +228,13 @@ export default function TeachersList() {
           ) : null
         }
       />
-      <Table title="Teachers List" rows={rows} columns={columns} />
+      <Table
+        title="Teachers List"
+        rows={rows}
+        columns={columns}
+        loading={loadingTeachers}
+        loadingText="Loading teachers..."
+      />
 
       <Modal
         open={resetOpen}

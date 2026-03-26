@@ -9,12 +9,16 @@ import Panel from "../../components/common/Panel";
 import Modal from "../../components/common/Modal";
 import Table from "../../components/common/Table";
 import Badge from "../../components/common/Badge";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import { roleHomePath } from "../../utils/helpers";
 
 export default function UsersManagement() {
   const [rows, setRows] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [pendingDeleteUser, setPendingDeleteUser] = useState(null);
+  const [successModal, setSuccessModal] = useState({ open: false, title: "", message: "" });
   const { role } = useAuth();
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm({
     defaultValues: { 
@@ -32,37 +36,37 @@ export default function UsersManagement() {
   const [isVerifyingMfa, setIsVerifyingMfa] = useState(false);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const normalizedRole = role?.toLowerCase();
 
-  // Fetch users on component mount
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        console.log("Fetching users list...");
-        console.log("Calling adminService for role:", role);
-        
-        // Use appropriate endpoint based on role
-        const data = role === "admin" 
+  const openSuccessModal = (title, message) => {
+    setSuccessModal({ open: true, title, message });
+  };
+
+  const loadUsers = async ({ showAlert = false } = {}) => {
+    if (normalizedRole !== "admin" && normalizedRole !== "headteacher") {
+      setRows([]);
+      return;
+    }
+
+    try {
+      setLoadingUsers(true);
+      const data =
+        normalizedRole === "admin"
           ? await adminService.listUsers()
           : await adminService.listAllUsers();
-          
-        console.log("Users data received:", data);
-        console.log("Data type:", typeof data);
-        console.log("Is array:", Array.isArray(data));
-        console.log("Data keys:", Object.keys(data || {}));
-        
-        const usersArray = Array.isArray(data) ? data : data.users || data.items || [];
-        console.log("Final users array:", usersArray);
-        setRows(usersArray);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        console.error("Error response:", error.response?.data);
-        console.error("Error status:", error.response?.status);
-        alert("Failed to load users. Check backend permissions.");
-      }
-    };
-    
-    fetchUsers();
-  }, []); // Empty dependency array means this runs once on mount
+      const usersArray = Array.isArray(data) ? data : data.users || data.items || [];
+      setRows(usersArray);
+      if (showAlert) alert("Users list refreshed!");
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      setRows([]);
+      alert("Failed to load users. Check backend permissions.");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   // MFA verification functions
   const handleMfaVerification = async () => {
@@ -123,29 +127,7 @@ export default function UsersManagement() {
   });
 
   useEffect(() => {
-    let ignore = false;
-    (async () => {
-      console.log("UsersManagement useEffect - role:", role);
-      try {
-        const normalizedRole = role?.toUpperCase();
-        console.log("UsersManagement useEffect - normalizedRole:", normalizedRole);
-        
-        if (normalizedRole !== "ADMIN" && normalizedRole !== "HEADTEACHER") {
-          console.log("Access denied - role not admin or headteacher");
-          if (!ignore) setRows([]);
-          return;
-        }
-        console.log("Access granted - users will be loaded when created");
-        // Removed automatic GET request - users will be loaded only when created
-        if (!ignore) setRows([]);
-      } catch {
-        console.log("Error initializing users management");
-        if (!ignore) setRows([]);
-      }
-    })();
-    return () => {
-      ignore = true;
-    };
+    loadUsers();
   }, [role]);
 
   const columns = useMemo(
@@ -179,8 +161,9 @@ export default function UsersManagement() {
               className="inline-flex h-9 items-center justify-center rounded-2xl bg-slate-900/5 px-3 text-xs font-semibold text-slate-800 hover:bg-slate-900/10"
               onClick={() => {
                 setEditingUser(r);
-                setEditValues({
+                resetEdit({
                   name: r.name || "",
+                  username: r.username || "",
                   email: r.email || "",
                   password: "",
                   role: r.role || "teacher",
@@ -196,17 +179,16 @@ export default function UsersManagement() {
               type="button"
               className="inline-flex h-9 items-center justify-center rounded-2xl bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700"
               onClick={async () => {
-                if (window.confirm(`Enable 2FA for ${r.name}?`)) {
-                  try {
-                    await adminService.updateUser(r._id || r.id, { twoFactorEnabled: true });
-                    const data = role === "admin" 
-                      ? await adminService.listUsers()
-                      : await adminService.listAllUsers();
-                    setRows(Array.isArray(data) ? data : data.users || data.items || []);
-                    alert("2FA enabled!");
-                  } catch {
-                    alert("Failed to enable 2FA.");
-                  }
+                try {
+                  const nextValue = !Boolean(r.mfa_enabled || r.twoFactorEnabled);
+                  await adminService.updateUser(r._id || r.id, { twoFactorEnabled: nextValue });
+                  await loadUsers();
+                  openSuccessModal(
+                    "2FA Updated",
+                    `Two-factor authentication has been ${nextValue ? "enabled" : "disabled"} for ${r.name || "this user"}.`
+                  );
+                } catch {
+                  alert("Failed to enable 2FA.");
                 }
               }}
             >
@@ -215,20 +197,7 @@ export default function UsersManagement() {
             <button
               type="button"
               className="inline-flex h-9 items-center justify-center rounded-2xl bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700"
-              onClick={async () => {
-                if (window.confirm(`Are you sure you want to delete user "${r.name}"? This action cannot be undone.`)) {
-                  try {
-                    await adminService.deleteUser(r._id || r.id);
-                    const data = role === "admin" 
-                      ? await adminService.listUsers()
-                      : await adminService.listAllUsers();
-                    setRows(Array.isArray(data) ? data : data.users || data.items || []);
-                    alert('User deleted successfully!');
-                  } catch {
-                    alert("Delete failed. Check backend permissions.");
-                  }
-                }
-              }}
+              onClick={() => setPendingDeleteUser(r)}
             >
               Delete
             </button>
@@ -249,12 +218,7 @@ export default function UsersManagement() {
         <button
           onClick={async () => {
             try {
-              // Use appropriate endpoint based on role
-              const data = role === "admin" 
-                ? await adminService.listUsers()
-                : await adminService.listAllUsers();
-              setRows(Array.isArray(data) ? data : data.users || data.items || []);
-              alert('Users list refreshed!');
+              await loadUsers({ showAlert: true });
             } catch (error) {
               console.error('Failed to refresh users:', error);
               alert('Failed to refresh users list');
@@ -307,15 +271,13 @@ export default function UsersManagement() {
                 setRows(prevRows => [...prevRows, newUser]);
               } else {
                 console.error("No user data found in response");
-                // If we can't add locally, fetch the updated list
-                try {
-                  const data = await adminService.listUsers();
-                  setRows(Array.isArray(data) ? data : data.items || []);
-                } catch (fetchError) {
-                  console.error("Failed to fetch users after creation:", fetchError);
-                }
+                await loadUsers();
               }
               reset();
+              openSuccessModal(
+                "User Created",
+                `${values.name || "The user"} was created successfully.`
+              );
             } catch (error) {
               console.error("Create user error:", error);
               console.error("Error response:", error.response?.data);
@@ -471,7 +433,14 @@ export default function UsersManagement() {
         </Panel>
       ) : null}
 
-      <Table title="Users" rows={rows} columns={columns} searchable={true} />
+      <Table
+        title="Users"
+        rows={rows}
+        columns={columns}
+        searchable={true}
+        loading={loadingUsers}
+        loadingText="Loading users..."
+      />
 
       <Modal
         open={isEditOpen}
@@ -493,11 +462,12 @@ export default function UsersManagement() {
               };
               if (values.password) payload.password = values.password;
               await adminService.updateUser(editingUser._id || editingUser.id, payload);
-              const data = role === "admin" 
-                ? await adminService.listUsers()
-                : await adminService.listAllUsers();
-              setRows(Array.isArray(data) ? data : data.users || data.items || []);
+              await loadUsers();
               setIsEditOpen(false);
+              openSuccessModal(
+                "User Updated",
+                `${values.name || editingUser.name || "The user"} was updated successfully.`
+              );
             } catch {
               alert("Update failed. Check backend permissions.");
             }
@@ -576,6 +546,48 @@ export default function UsersManagement() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteUser)}
+        title="Delete user"
+        message={`Are you sure you want to delete "${pendingDeleteUser?.name || "this user"}"? This action cannot be undone.`}
+        confirmText="Delete"
+        onClose={() => setPendingDeleteUser(null)}
+        onConfirm={async () => {
+          const target = pendingDeleteUser;
+          setPendingDeleteUser(null);
+          if (!target) return;
+          try {
+            await adminService.deleteUser(target._id || target.id);
+            await loadUsers();
+            openSuccessModal(
+              "User Deleted",
+              `${target.name || "The user"} was deleted successfully.`
+            );
+          } catch {
+            alert("Delete failed. Check backend permissions.");
+          }
+        }}
+      />
+
+      <Modal
+        open={successModal.open}
+        title={successModal.title}
+        onClose={() => setSuccessModal({ open: false, title: "", message: "" })}
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white hover:brightness-110"
+              onClick={() => setSuccessModal({ open: false, title: "", message: "" })}
+            >
+              OK
+            </button>
+          </div>
+        }
+      >
+        <div className="text-sm leading-relaxed text-slate-700">{successModal.message}</div>
       </Modal>
     </div>
   );

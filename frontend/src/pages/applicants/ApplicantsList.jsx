@@ -56,11 +56,22 @@ function normalizeApplicant(a) {
   };
 }
 
+function extractApplicantItems(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.applicants)) return data.applicants;
+  if (Array.isArray(data?.data)) return data.data;
+  if (data?.applicant) return [data.applicant];
+  return [];
+}
+
 export default function ApplicantsList() {
   const navigate = useNavigate();
   const { role, user } = useAuth();
-  const isHeadteacher = role === "headteacher" || role === "assistant_headteacher" || role === "assistantHeadteacher";
-  const isParent = String(role || "").toLowerCase() === "parent";
+  const normalizedRole = String(role || "").toLowerCase();
+  const isAdmin = normalizedRole === "admin";
+  const isHeadteacher = normalizedRole === "headteacher" || normalizedRole === "assistant_headteacher" || normalizedRole === "assistantheadteacher";
+  const isParent = normalizedRole === "parent";
   const [searchParams] = useSearchParams();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,12 +83,15 @@ export default function ApplicantsList() {
     (async () => {
       try {
         if (!ignore) setLoading(true);
+        const params = status ? { status: String(status).toUpperCase() } : undefined;
         const data = isParent
           ? await getApplicantsForParent(user?.id || user?._id)
-          : await applicantService.listHeadteacherApplicants();
-        const items = Array.isArray(data) ? data : data.items || data.applicants || [];
+          : isAdmin
+            ? await applicantService.listAdminApplicants(params)
+            : await applicantService.listHeadteacherApplicants(params);
+        const items = extractApplicantItems(data);
         const normalizedItems = items.map(normalizeApplicant);
-        const filteredItems = status
+        const filteredItems = isParent && status
           ? normalizedItems.filter((item) => item.status === String(status).toLowerCase())
           : normalizedItems;
 
@@ -93,7 +107,7 @@ export default function ApplicantsList() {
     return () => {
       ignore = true;
     };
-  }, [status, role, isParent, user]);
+  }, [status, isAdmin, isParent, user]);
 
   const columns = useMemo(
     () => [

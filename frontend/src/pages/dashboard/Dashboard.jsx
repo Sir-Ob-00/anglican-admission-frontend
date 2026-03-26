@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import PageHeader from "../../components/common/PageHeader";
 import StatCard from "../../components/common/StatCard";
 import Panel from "../../components/common/Panel";
+import Loader from "../../components/common/Loader";
 import { getAssistantDashboard, getDashboardSummary, getHeadteacherDashboard, getTeacherDashboard, getParentDashboard } from "../../services/dashboardService";
 import * as adminService from "../../services/adminService";
 import * as classService from "../../services/classService";
@@ -109,13 +110,14 @@ function roleCards(role) {
   switch (role) {
     case "admin":
       return [
-        { title: "Total Users", value: "0", tone: "brand" },
-        { title: "Total Applicants", value: "0", tone: "teal" },
-        { title: "Total Students", value: "0", tone: "gold" },
-        { title: "Total Teachers", value: "0", tone: "neutral" },
-        { title: "Total Parents", value: "0", tone: "teal" },
-        { title: "Total Classes", value: "0", tone: "brand" },
-        { title: "Total Payments", value: "0", tone: "gold" },
+        { title: "Total Users", value: "--", tone: "brand" },
+        { title: "Total Applicants", value: "--", tone: "teal" },
+        { title: "Total Students", value: "--", tone: "gold" },
+        { title: "Total Teachers", value: "--", tone: "neutral" },
+        { title: "Total Parents", value: "--", tone: "teal" },
+        { title: "Total Classes", value: "--", tone: "brand" },
+        { title: "Total Payments", value: "--", tone: "gold" },
+        { title: "Admission Rate", value: "--", tone: "teal" },
       ];
     case "headteacher":
       return [
@@ -145,16 +147,26 @@ function roleCards(role) {
   }
 }
 
+function displayMetric(value, suffix = "") {
+  if (value === null || value === undefined || value === "") return "--";
+  return `${value}${suffix}`;
+}
+
 export default function Dashboard() {
   const { role, user } = useAuth();
   const [summary, setSummary] = useState(null);
-  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(null);
   const [classes, setClasses] = useState([]);
   const [head, setHead] = useState(null);
   const [assistant, setAssistant] = useState(null);
   const [teacher, setTeacher] = useState(null);
   const [parent, setParent] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const parentApplicant = parent?.latestApplicant || parent?.applicants?.[0] || null;
+  const normalizedParentPaymentStatus = String(parentApplicant?.paymentStatus || "").toLowerCase();
+  const parentPaymentCompleted = normalizedParentPaymentStatus === "payment_completed";
+  const canInitiateParentPayment = Boolean(parentApplicant?._id) && !parentPaymentCompleted;
 
   const handlePayAdmissionFee = async (applicantId) => {
     try {
@@ -224,23 +236,28 @@ export default function Dashboard() {
           if (!ignore) setTeacher(data);
         } else if (normalizedRole === "parent") {
           console.log("Loading parent dashboard...");
-          const data = await getParentDashboard();
+          const data = await getParentDashboard(user?.id || user?._id);
           if (!ignore) setParent(data);
         } else if (normalizedRole === "admin") {
           console.log("Loading admin dashboard...");
-          const data = await getDashboardSummary();
-          if (!ignore) setSummary(data);
-          
-          // Also fetch total users count
+          if (!ignore) setAdminLoading(true);
           try {
-            console.log("Fetching total users count...");
-            const usersData = await adminService.listUsers();
-            const usersArray = Array.isArray(usersData) ? usersData : usersData.users || usersData.items || [];
-            console.log("Total users count:", usersArray.length);
-            if (!ignore) setTotalUsers(usersArray.length);
-          } catch (usersError) {
-            console.error("Failed to fetch total users:", usersError);
-            if (!ignore) setTotalUsers(0);
+            const data = await getDashboardSummary();
+            if (!ignore) setSummary(data);
+            
+            // Also fetch total users count
+            try {
+              console.log("Fetching total users count...");
+              const usersData = await adminService.listUsers();
+              const usersArray = Array.isArray(usersData) ? usersData : usersData.users || usersData.items || [];
+              console.log("Total users count:", usersArray.length);
+              if (!ignore) setTotalUsers(usersArray.length);
+            } catch (usersError) {
+              console.error("Failed to fetch total users:", usersError);
+              if (!ignore) setTotalUsers(null);
+            }
+          } finally {
+            if (!ignore) setAdminLoading(false);
           }
         } else {
           console.log("Unknown role, loading default dashboard...");
@@ -260,7 +277,7 @@ export default function Dashboard() {
     return () => {
       ignore = true;
     };
-  }, [role]);
+  }, [role, user]);
 
   const chartData = useMemo(() => {
     const normalizedRole = role?.toLowerCase();
@@ -390,15 +407,17 @@ export default function Dashboard() {
     if (!summary) return roleCards(role);
 
     if (normalizedRole === "admin") {
+      const totals = summary.totals || {};
+      const admissionRate = summary.workflow?.admissionRate;
       return [
-        { title: "Total Users", value: String(totalUsers), tone: "brand" },
-        { title: "Total Applicants", value: "0", tone: "teal" },
-        { title: "Total Students", value: "0", tone: "gold" },
-        { title: "Total Teachers", value: "0", tone: "neutral" },
-        { title: "Total Parents", value: "0", tone: "teal" },
-        { title: "Total Classes", value: "0", tone: "brand" },
-        { title: "Total Payments", value: "0", tone: "gold" },
-        { title: "Admission Rate", value: "0%", tone: "teal" },
+        { title: "Total Users", value: displayMetric(totals.totalUsers ?? totalUsers), tone: "brand" },
+        { title: "Total Applicants", value: displayMetric(totals.totalApplicants), tone: "teal" },
+        { title: "Total Students", value: displayMetric(totals.totalStudents), tone: "gold" },
+        { title: "Total Teachers", value: displayMetric(totals.totalTeachers), tone: "neutral" },
+        { title: "Total Parents", value: displayMetric(totals.totalParents), tone: "teal" },
+        { title: "Total Classes", value: displayMetric(totals.totalClasses), tone: "brand" },
+        { title: "Total Payments", value: displayMetric(totals.totalPayments), tone: "gold" },
+        { title: "Admission Rate", value: displayMetric(admissionRate, "%"), tone: "teal" },
       ];
     }
 
@@ -412,18 +431,22 @@ export default function Dashboard() {
         subtitle="Overview of applicants, exams, admissions, payments, and activity."
       />
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {cards.map((c) => (
-          <StatCard
-            key={c.title}
-            title={c.title}
-            value={c.value}
-            hint={c.hint}
-            tone={c.tone}
-            icon={iconForTitle(c.title)}
-          />
-        ))}
-      </div>
+      {role?.toLowerCase() === "admin" && adminLoading ? (
+        <Loader label="Loading dashboard overview..." />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {cards.map((c) => (
+            <StatCard
+              key={c.title}
+              title={c.title}
+              value={c.value}
+              hint={c.hint}
+              tone={c.tone}
+              icon={iconForTitle(c.title)}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Panel className="p-4">
@@ -457,7 +480,7 @@ export default function Dashboard() {
         </Panel>
 
         <Panel className="p-4">
-          {role?.toLowerCase() === "parent" && parent?.latestApplicant ? (
+          {role?.toLowerCase() === "parent" ? (
             <>
               <div className="font-display text-lg font-semibold text-slate-900">Payment Actions</div>
               <div className="mt-3 space-y-3">
@@ -465,38 +488,34 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-slate-900">
-                        {parent.latestApplicant.fullName}
+                        {parentApplicant?.fullName || "No applicant selected"}
                       </div>
                       <div className="mt-1 text-xs text-slate-600">
-                        Payment Status: {parent.latestApplicant.paymentStatus === 'payment_completed' ? 'Paid ✅' : 'Not Paid ❌'}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        Debug: Status="{parent.latestApplicant.status}", PaymentStatus="{parent.latestApplicant.paymentStatus}", ID="{parent.latestApplicant._id}"
+                        Payment Status: {parentApplicant ? (parentPaymentCompleted ? "Paid" : "Pending") : "Unavailable"}
                       </div>
                     </div>
-                    {parent.latestApplicant.paymentStatus !== 'payment_completed' && (
-                      <button
-                        onClick={() => handlePayAdmissionFee(parent.latestApplicant._id)}
-                        disabled={loading}
-                        className="inline-flex h-9 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white shadow-sm hover:brightness-110 disabled:opacity-60"
-                      >
-                        {loading ? 'Processing...' : 'Pay Admission Fee'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => parentApplicant?._id && handlePayAdmissionFee(parentApplicant._id)}
+                      disabled={loading || !canInitiateParentPayment}
+                      className="inline-flex h-9 items-center justify-center rounded-2xl bg-[color:var(--brand)] px-4 text-sm font-semibold text-white shadow-sm hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loading ? "Processing..." : parentPaymentCompleted ? "Payment Completed" : "Initiate Payment"}
+                    </button>
                   </div>
                 </div>
-                {parent.latestApplicant.paymentStatus === 'payment_completed' && (
+                {parentApplicant ? parentPaymentCompleted ? (
                   <div className="rounded-2xl bg-green-50 p-3 text-sm text-green-800">
-                    ✅ Payment completed! Admission fee has been received.
+                    Payment completed. Admission fee has been received.
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">
+                    Start the admission payment for this application to continue processing.
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-white/60 p-3 text-sm text-slate-600">
+                    No applicant is available for payment yet.
                   </div>
                 )}
-              </div>
-            </>
-          ) : role?.toLowerCase() === "parent" ? (
-            <>
-              <div className="font-display text-lg font-semibold text-slate-900">Payment Actions</div>
-              <div className="mt-3 rounded-2xl bg-white/60 p-3 text-sm text-slate-600">
-                Debug: No latestApplicant found. Parent data: {JSON.stringify(parent, null, 2)}
               </div>
             </>
           ) : role?.toLowerCase() === "admin" ? (
@@ -590,20 +609,6 @@ export default function Dashboard() {
               </div>
             </>
           )}
-        </Panel>
-        
-        {/* Debug Section */}
-        <Panel className="p-4">
-          <div className="font-display text-lg font-semibold text-slate-900">Debug Info</div>
-          <div className="mt-3 rounded-2xl bg-white/60 p-3 text-sm text-slate-600">
-            <p>Current role: {role}</p>
-            <p>Normalized role: {role?.toLowerCase()}</p>
-            <p>Summary data: {summary ? 'Available' : 'Not available'}</p>
-            <p>Parent data: {parent ? 'Available' : 'Not available'}</p>
-            <p>Head data: {head ? 'Available' : 'Not available'}</p>
-            <p>Assistant data: {assistant ? 'Available' : 'Not available'}</p>
-            <p>Teacher data: {teacher ? 'Available' : 'Not available'}</p>
-          </div>
         </Panel>
       </div>
     </div>

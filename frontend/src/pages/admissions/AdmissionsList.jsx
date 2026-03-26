@@ -15,25 +15,36 @@ export default function AdmissionsList() {
   const [rows, setRows] = useState([]);
   const [studentsByApplicant, setStudentsByApplicant] = useState(new Map());
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [loadingAdmissions, setLoadingAdmissions] = useState(true);
+
+  async function refreshAdmissions() {
+    try {
+      setLoadingAdmissions(true);
+      const [admissionsRes, studentsRes] = await Promise.all([
+        admissionService.listAdmissions(),
+        listStudents(),
+      ]);
+      const items = Array.isArray(admissionsRes) ? admissionsRes : admissionsRes.items || [];
+      const students = Array.isArray(studentsRes) ? studentsRes : studentsRes.items || [];
+      setRows(items);
+      const map = new Map();
+      for (const s of students) {
+        if (s.applicant) map.set(String(s.applicant), s);
+      }
+      setStudentsByApplicant(map);
+    } catch {
+      setRows([]);
+      setStudentsByApplicant(new Map());
+    } finally {
+      setLoadingAdmissions(false);
+    }
+  }
 
   useEffect(() => {
     let ignore = false;
     (async () => {
       try {
-        const [admissionsRes, studentsRes] = await Promise.all([
-          admissionService.listAdmissions(),
-          listStudents(),
-        ]);
-        const items = Array.isArray(admissionsRes) ? admissionsRes : admissionsRes.items || [];
-        const students = Array.isArray(studentsRes) ? studentsRes : studentsRes.items || [];
-        if (!ignore) {
-          setRows(items);
-          const map = new Map();
-          for (const s of students) {
-            if (s.applicant) map.set(String(s.applicant), s);
-          }
-          setStudentsByApplicant(map);
-        }
+        await refreshAdmissions();
       } catch {
         if (!ignore) {
           setRows([]);
@@ -92,19 +103,7 @@ export default function AdmissionsList() {
                       try {
                         await admissionService.deleteStudent(student._id);
                         alert('Student deleted successfully!');
-                        // Refresh the list
-                        const [admissionsRes, studentsRes] = await Promise.all([
-                          admissionService.listAdmissions(),
-                          listStudents(),
-                        ]);
-                        const items = Array.isArray(admissionsRes) ? admissionsRes : admissionsRes.items || [];
-                        const students = Array.isArray(studentsRes) ? studentsRes : studentsRes.items || [];
-                        setRows(items);
-                        const map = new Map();
-                        for (const s of students) {
-                          if (s.applicant) map.set(String(s.applicant), s);
-                        }
-                        setStudentsByApplicant(map);
+                        await refreshAdmissions();
                       } catch (error) {
                         alert('Failed to delete student: ' + (error?.response?.data?.message || error.message));
                       }
@@ -148,6 +147,8 @@ export default function AdmissionsList() {
         }))}
         columns={columns}
         onRowClick={(r) => navigate(`/admissions/${r.id}`)}
+        loading={loadingAdmissions}
+        loadingText="Loading admissions..."
       />
 
       <Modal
